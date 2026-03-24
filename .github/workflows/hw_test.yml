@@ -34,7 +34,7 @@ jobs:
 
   hw-test:
     needs: build
-    runs-on: [self-hosted, "${{ github.event.inputs.target_runner || 'MacBook-Pro' }}"]
+    runs-on: [self-hosted, "${{ github.event.inputs.target_runner || 'macOS' }}"]
     steps:
       - uses: actions/checkout@v4
       - name: Setup Python
