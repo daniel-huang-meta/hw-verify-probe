@@ -1,2 +1,2 @@
 # htf
-Hardware test framework
+Hardware test probe
