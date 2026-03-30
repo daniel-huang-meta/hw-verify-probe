@@ -1,2 +1,2 @@
-# htf
-Hardware test probe
+# hw-verify-probe
+Hardware verify probe
