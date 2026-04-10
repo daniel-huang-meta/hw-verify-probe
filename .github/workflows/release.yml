@@ -5,6 +5,9 @@ on:
     tags:
       - "v*"
 
+permissions:
+  contents: write  # 必须拥有写入权限才能创建 Release
+
 jobs:
   build-macos:
     runs-on: macos-latest
