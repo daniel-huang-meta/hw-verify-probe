@@ -1,4 +1,4 @@
-name: Release HVP Binary
+name: Release HWV Binary
 
 on:
   push:
