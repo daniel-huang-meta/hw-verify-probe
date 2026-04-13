@@ -3,7 +3,7 @@ name: Release HVP Binary
 on:
   push:
     tags:
-      - "v*"
+      - "hvp/v*"
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
