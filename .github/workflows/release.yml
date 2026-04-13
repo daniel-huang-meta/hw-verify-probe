@@ -1,16 +1,18 @@
-name: Release HWV Binary
+name: Release HVP Binary
 
 on:
   push:
     tags:
       - "v*"
 
-permissions:
-  contents: write  # 必须拥有写入权限才能创建 Release
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build-macos:
     runs-on: macos-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -23,14 +25,14 @@ jobs:
       - name: Build MacOS Binary
         run: |
           uv sync
-          uv run pyinstaller --onefile --name hwv main.py
+          uv run pyinstaller --onefile --name hvp main.py
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           # 上传打包后的二进制文件
-          files: dist/hwv
+          files: dist/hvp
           name: Release ${{ github.ref_name }}
-          body: "Hardware Verify Probe (HWV) MacOS Binary Release."
+          body: "Hardware Verify Probe (HVP) MacOS Binary Release."
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
