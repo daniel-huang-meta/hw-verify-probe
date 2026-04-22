@@ -1,4 +1,4 @@
-````mermaid``
+```mermaid```
 flowchart LR
     %% 外部网络区域 (External Networks)
     GH(("☁️ GitHub\n(External / Public)"))
