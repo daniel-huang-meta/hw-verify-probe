@@ -1,37 +1,49 @@
+````mermaid``
 flowchart LR
-    %% 外部与核心网络
-    GH(("☁️ github\n(External Network)"))
+    %% 外部网络区域 (External Networks)
+    GH(("☁️ GitHub\n(External / Public)"))
+    Manifold(("🌐 Manifold Platform\n(External Data Sink)"))
+
+    %% 办公与路由核心
     WL["💻 Working Laptop\n(self-hosted runner)"]
-    Router{"🖧 Router"}
+    Router{"🖧 Local Router\n(192.168.1.0/24)"}
 
     GH --- WL --- Router
 
-    %% 子网 1
-    subgraph Subnet1 [MacMini 1]
-        M1["🖥️ MacMini 1\n(192.168.1.1)"] -- "192.168.2.x subnet" --> B1["📦 Box 1"]
+    %% 本地测试子网 1
+    subgraph Subnet1 [Test Station 1]
+        M1["🖥️ MacMini 1\n(192.168.1.101)"] -- "Local 192.168.2.x" --> B1["📦 Box 1"]
     end
 
-    %% 子网 2
-    subgraph Subnet2 [MacMini 2]
-        M2["🖥️ MacMini 2\n(192.168.1.2)"] -- "192.168.2.x subnet" --> B2["📦 Box 2"]
+    %% 本地测试子网 2
+    subgraph Subnet2 [Test Station 2]
+        M2["🖥️ MacMini 2\n(192.168.1.102)"] -- "Local 192.168.2.x" --> B2["📦 Box 2"]
     end
 
-    %% 子网 3 (新增 Manifold 平台连线)
-    subgraph Subnet3 [MacMini 3]
-        M3["🖥️ MacMini 3\n(192.168.1.3)"] -- "192.168.2.x subnet" --> B3["📦 Box 3"]
-        M3 == "Product Subnet\n(Data Upload)" ==> Manifold(("📊 Manifold\n(Data Platform)"))
+    %% 本地测试子网 3 (已恢复为普通节点)
+    subgraph Subnet3 [Test Station 3]
+        M3["🖥️ MacMini 3\n(192.168.1.103)"] -- "Local 192.168.2.x" --> B3["📦 Box 3"]
     end
 
-    %% 路由连线
-    Router -- "192.168.1.x" --> M1
-    Router -- "192.168.1.x" --> M2
-    Router -- "192.168.1.x" --> M3
+    %% 新增纯数据处理节点 4 (不连 Box)
+    subgraph Subnet4 [Data Upload Station]
+        M4["🖥️ MacMini 4\n(192.168.1.104)"]
+    end
+
+    %% 办公网连线
+    Router --> M1
+    Router --> M2
+    Router --> M3
+    Router --> M4
+
+    %% 外部数据上报连线 (仅限 MacMini 4)
+    M4 == "Product Subnet 10.23.24.x\n(External Upload Route)" ===> Manifold
 
     %% 样式定义
-    classDef external fill:#f8f9fa,stroke:#dee2e6,stroke-width:2px
-    classDef node fill:#e7f5ff,stroke:#74c0fc,stroke-width:2px
+    classDef external fill:#f8f9fa,stroke:#adb5bd,stroke-width:2px,stroke-dasharray: 5 5
+    classDef office fill:#e7f5ff,stroke:#74c0fc,stroke-width:2px
     classDef special fill:#fff3cd,stroke:#f5c211,stroke-width:2px
     
-    class GH external
-    class WL,Router,M1,M2,B1,B2 node
-    class M3,B3,Manifold special
+    class GH,Manifold external
+    class WL,Router,M1,M2,M3,B1,B2,B3 office
+    class M4 special
