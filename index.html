@@ -24,6 +24,8 @@
         .btn-secondary:hover { background-color: #e8eaed; }
         .btn-action { background-color: #fbbc04; color: #000; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; }
         .btn-action:hover { background-color: #f2a500; }
+        .btn-danger { background-color: #c5221f; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: 500; font-size: 14px; }
+        .btn-danger:hover { background-color: #b31412; }
 
         /* Content Area */
         .loading-bar { display: none; background-color: #e8f0fe; color: #1a73e8; text-align: center; padding: 10px; font-weight: bold; font-size: 14px; border-bottom: 1px solid #d2e3fc; }
@@ -72,7 +74,10 @@
             <button class="tab-button" onclick="openTab(event, 'tracker')">Test Tracker</button>
             <button class="tab-button" onclick="openTab(event, 'issues')">Issues</button>
         </div>
-        <button class="btn-primary" onclick="openAddDutModal()">+ Register New DUT</button>
+        <div>
+            <button class="btn-danger" onclick="resetToken()" style="margin-right: 10px;">Reset Token</button>
+            <button class="btn-primary" onclick="openAddDutModal()">+ Register New DUT</button>
+        </div>
     </div>
 
     <div id="loading" class="loading-bar">⏳ Communicating with database, please wait...</div>
@@ -167,11 +172,9 @@
     <script>
         // ==========================================
         // 1. SYSTEM CONFIGURATION 
-        // Replace these values with your actual Gist credentials
         // ==========================================
         const GIST_CONFIG = {
-            ID: '104ab45888190d6b83f521c00a64ccb4', 
-            TOKEN: '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',
+            ID: 'YOUR_GIST_ID', // Replace with your actual Gist ID
             FILENAME: 'db.json'
         };
 
@@ -179,18 +182,46 @@
         let db = { registry: [], tracker: [], victims: [], issues: [] };
 
         // ==========================================
-        // 2. INITIALIZATION & DATA FETCHING
+        // 2. AUTHENTICATION & INITIALIZATION
         // ==========================================
         window.onload = function() {
             loadAllData();
         };
 
+        function getGitHubToken() {
+            let token = localStorage.getItem('gist_token');
+            if (!token) {
+                token = prompt("Please enter your GitHub Personal Access Token (PAT):");
+                if (token && token.trim() !== '') {
+                    localStorage.setItem('gist_token', token.trim());
+                } else {
+                    alert("Token is required to access the database. The page will not load correctly.");
+                    return null;
+                }
+            }
+            return token;
+        }
+
+        function resetToken() {
+            localStorage.removeItem('gist_token');
+            alert("Token removed. The page will reload and prompt you for a new Token.");
+            location.reload();
+        }
+
         async function loadAllData() {
+            const token = getGitHubToken();
+            if (!token) return;
+
             document.getElementById('loading').style.display = 'block';
             try {
                 const response = await fetch(`https://api.github.com/gists/${GIST_CONFIG.ID}`, {
-                    headers: { 'Authorization': `token ${GIST_CONFIG.TOKEN}` }
+                    headers: { 'Authorization': `token ${token}` }
                 });
+                
+                if (response.status === 401 || response.status === 403 || response.status === 404) {
+                    localStorage.removeItem('gist_token');
+                    throw new Error(`Authentication failed or Gist not found. HTTP Status: ${response.status}`);
+                }
                 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
@@ -216,25 +247,37 @@
                 
             } catch (error) {
                 console.error("Database connection failed:", error);
-                alert("Failed to connect to the database. Please check your GIST_ID and TOKEN.");
+                alert("Failed to connect: " + error.message + "\n\nPlease ensure your Token is valid, has 'gist' permission, and your Gist ID is correct. Click 'Reset Token' to try again.");
             } finally {
                 document.getElementById('loading').style.display = 'none';
             }
         }
 
         async function syncToGist() {
+            const token = localStorage.getItem('gist_token');
+            if (!token) {
+                alert("Session expired. Please refresh the page to enter your token.");
+                return;
+            }
+
             document.getElementById('loading').style.display = 'block';
             try {
                 const response = await fetch(`https://api.github.com/gists/${GIST_CONFIG.ID}`, {
                     method: 'PATCH',
                     headers: { 
-                        'Authorization': `token ${GIST_CONFIG.TOKEN}`,
+                        'Authorization': `token ${token}`,
                         'Content-Type': 'application/json' 
                     },
                     body: JSON.stringify({
                         files: { [GIST_CONFIG.FILENAME]: { content: JSON.stringify(db, null, 2) } }
                     })
                 });
+
+                if (response.status === 401 || response.status === 403) {
+                    localStorage.removeItem('gist_token');
+                    alert("Token invalid or revoked. Please reset token and try again.");
+                    return;
+                }
 
                 if (!response.ok) {
                     throw new Error("Failed to write to database");
@@ -272,7 +315,7 @@
             // Generate today's date
             const today = new Date().toISOString().split('T')[0];
 
-            // 1. Add to Registry
+            // Add to Registry
             const newDUT = {
                 'DUT#': nextId,
                 'Status': 'Active',
@@ -284,10 +327,9 @@
             };
             db.registry.push(newDUT);
 
-            // 2. Automatically generate tests based on Victim Config
+            // Automatically generate tests based on Victim Config
             if (db.victims.length > 0) {
                 db.victims.forEach(v => {
-                    // Handle different variations of column names in the victims CSV
                     const testName = v['Victim Test Name'] || v['name'] || v['Victim Test'] || 'Unknown Test';
                     db.tracker.push({
                         'DUT#': nextId,
@@ -306,7 +348,11 @@
             closeModal('modalAddDut');
             await syncToGist();
             alert(`Success! DUT #${nextId} registered and tests scheduled.`);
-            loadAllData(); // Refresh UI
+            
+            // Refresh UI
+            renderDashboard();
+            renderRegistry();
+            renderTracker();
         }
 
         async function submitTestUpdate() {
@@ -321,7 +367,7 @@
             if (testIndex !== -1) {
                 db.tracker[testIndex]['Status'] = status;
                 db.tracker[testIndex]['Issues'] = comments;
-                db.tracker[testIndex]['Date'] = new Date().toISOString().split('T')[0]; // Update timestamp
+                db.tracker[testIndex]['Date'] = new Date().toISOString().split('T')[0];
                 
                 // If status is fail, automatically log it to Issues table
                 if (status === 'Fail') {
@@ -338,7 +384,11 @@
                 closeModal('modalUpdateTest');
                 await syncToGist();
                 alert(`Success! Test status updated.`);
-                loadAllData();
+                
+                // Refresh UI
+                renderDashboard();
+                renderTracker();
+                renderIssues();
             } else {
                 alert("Error: Test record not found in database.");
             }
@@ -421,7 +471,7 @@
                 </thead>
                 <tbody>`;
 
-            // Render from newest to oldest based on index/creation
+            // Render from newest to oldest
             const dataReversed = [...db.tracker].reverse();
 
             if (dataReversed.length === 0) {
@@ -430,7 +480,7 @@
                 dataReversed.forEach(t => {
                     const dutNo = t['DUT#'] || '';
                     const testName = t['Victim Test'] || '';
-                    const safeTestName = testName.replace(/'/g, "\\'"); // escape single quotes for JS function call
+                    const safeTestName = testName.replace(/'/g, "\\'"); 
                     
                     html += `<tr>
                         <td><b>${dutNo}</b></td>
@@ -488,27 +538,23 @@
         // ==========================================
 
         function openTab(evt, tabName) {
-            // Hide all tab contents
             const tabcontent = document.getElementsByClassName("tab-content");
             for (let i = 0; i < tabcontent.length; i++) {
                 tabcontent[i].style.display = "none";
                 tabcontent[i].classList.remove("active-content");
             }
             
-            // Remove active class from all buttons
             const tablinks = document.getElementsByClassName("tab-button");
             for (let i = 0; i < tablinks.length; i++) {
                 tablinks[i].className = tablinks[i].className.replace(" active-tab", "");
             }
             
-            // Show the current tab, and add an "active" class to the button
             document.getElementById(tabName).style.display = "block";
             document.getElementById(tabName).classList.add("active-content");
             evt.currentTarget.className += " active-tab";
         }
 
         function openAddDutModal() {
-            // Clear inputs
             document.getElementById('regHwBuild').value = '';
             document.getElementById('regConfig').value = '';
             document.getElementById('regLomaSn').value = '';
@@ -518,7 +564,6 @@
         }
 
         function openUpdateModal(dutNo, testName) {
-            // Find current data to populate modal
             const test = db.tracker.find(t => String(t['DUT#']) === String(dutNo) && t['Victim Test'] === testName);
             
             document.getElementById('updDutNo').value = dutNo;
