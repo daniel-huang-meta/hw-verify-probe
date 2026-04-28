@@ -1,338 +1,546 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>System Coex DUT Tracker</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; margin: 0; padding: 20px; color: #333; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        h2, h3 { border-bottom: 2px solid #3498db; padding-bottom: 10px; color: #2c3e50; margin-top: 0; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
-        th, td { padding: 8px 10px; border: 1px solid #ddd; text-align: left; }
-        th { background: #3498db; color: white; position: sticky; top: 0; z-index: 10;}
-        .table-container { max-height: 400px; overflow-y: auto; border-bottom: 1px solid #ddd;}
-        input, select, textarea { padding: 8px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box; }
-        .form-row { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 10px; }
-        .form-group { flex: 1; min-width: 200px; }
-        button { background: #3498db; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; font-weight: bold; margin-top: 10px; }
-        button:hover { background: #2980b9; }
-        button.action-btn { background: #e67e22; padding: 4px 8px; font-size: 12px; margin: 0; }
-        button.action-btn:hover { background: #d35400; }
-        .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.85em; font-weight: bold; }
-        .badge-active { background: #3498db; color: white; }
-        .badge-pending { background: #f1c40f; color: black; }
-        .badge-pass { background: #27ae60; color: white; }
-        .badge-fail { background: #e74c3c; color: white; }
-        #loading { display: none; color: #e67e22; font-weight: bold; margin-bottom: 15px; text-align: center; }
-        .hidden { display: none; }
-        .file-upload-row { display: flex; align-items: center; margin-bottom: 10px; padding: 10px; background: #f9f9f9; border: 1px solid #eee; border-radius: 4px;}
-        .file-upload-row span { width: 200px; font-weight: bold; }
-        .config-header { display: flex; justify-content: space-between; align-items: center; }
+        /* Global Styles */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: #f8f9fa; color: #3c4043; }
+        * { box-sizing: border-box; }
+        
+        /* Header & Navigation */
+        .header { background-color: #ffffff; padding: 15px 30px; box-shadow: 0 1px 3px rgba(60,64,67,0.3); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+        .logo { font-size: 20px; font-weight: bold; color: #1a73e8; display: flex; align-items: center; gap: 10px; }
+        .nav-tabs { display: flex; gap: 10px; }
+        .tab-button { padding: 10px 20px; cursor: pointer; border: none; background: none; font-size: 14px; color: #5f6368; border-bottom: 3px solid transparent; transition: all 0.2s; }
+        .tab-button:hover { color: #1a73e8; background-color: #f1f3f4; border-radius: 4px 4px 0 0; }
+        .active-tab { color: #1a73e8; border-bottom: 3px solid #1a73e8; font-weight: 600; }
+        
+        /* Buttons */
+        .btn-primary { background-color: #1a73e8; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: 500; font-size: 14px; transition: background 0.2s; }
+        .btn-primary:hover { background-color: #1557b0; }
+        .btn-secondary { background-color: #f1f3f4; color: #3c4043; border: 1px solid #dadce0; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: 500; font-size: 14px; }
+        .btn-secondary:hover { background-color: #e8eaed; }
+        .btn-action { background-color: #fbbc04; color: #000; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; }
+        .btn-action:hover { background-color: #f2a500; }
+
+        /* Content Area */
+        .loading-bar { display: none; background-color: #e8f0fe; color: #1a73e8; text-align: center; padding: 10px; font-weight: bold; font-size: 14px; border-bottom: 1px solid #d2e3fc; }
+        .tab-content { display: none; padding: 30px; max-width: 1400px; margin: 0 auto; }
+        .active-content { display: block; }
+
+        /* Dashboard Cards */
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(60,64,67,0.3); text-align: center; }
+        .stat-card h3 { margin: 0; color: #5f6368; font-size: 16px; font-weight: 500; }
+        .stat-card .number { font-size: 36px; color: #1a73e8; font-weight: bold; margin-top: 10px; }
+
+        /* Tables */
+        .table-container { background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(60,64,67,0.3); overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { background-color: #f8f9fa; color: #5f6368; font-weight: 600; padding: 15px; font-size: 13px; text-transform: uppercase; border-bottom: 2px solid #dadce0; }
+        td { padding: 12px 15px; border-bottom: 1px solid #e8eaed; font-size: 14px; vertical-align: middle; }
+        tr:hover { background-color: #f8f9fa; }
+
+        /* Badges */
+        .badge { padding: 6px 12px; border-radius: 12px; font-size: 12px; font-weight: bold; display: inline-block; text-align: center; }
+        .badge-active { background-color: #e8f0fe; color: #1a73e8; }
+        .badge-pending { background-color: #fef7e0; color: #b06000; }
+        .badge-inprogress { background-color: #e4f7fb; color: #007b83; }
+        .badge-pass { background-color: #e6f4ea; color: #137333; }
+        .badge-fail { background-color: #fce8e6; color: #c5221f; }
+
+        /* Modals */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+        .modal-content { background: white; padding: 30px; border-radius: 8px; width: 500px; max-width: 90%; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .modal-header { font-size: 18px; font-weight: bold; margin-bottom: 20px; color: #202124; border-bottom: 1px solid #dadce0; padding-bottom: 10px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 14px; color: #3c4043; font-weight: 500; margin-bottom: 5px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #dadce0; border-radius: 4px; font-size: 14px; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #1a73e8; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #dadce0; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>🚀 System Coex DUT Tracker</h2>
-        <div id="loading">⏳ 正在与 GitHub Gist 通信，请稍候...</div>
 
-        <div class="card">
-            <div class="config-header">
-                <h3 style="border:none; margin:0; padding:0;">⚙️ 系统配置</h3>
-                <button onclick="saveConfig()" style="margin:0;">连接数据库</button>
+    <div class="header">
+        <div class="logo">🚀 System Coex DUT Tracker</div>
+        <div class="nav-tabs">
+            <button class="tab-button active-tab" onclick="openTab(event, 'dashboard')">Dashboard</button>
+            <button class="tab-button" onclick="openTab(event, 'registry')">DUT Registry</button>
+            <button class="tab-button" onclick="openTab(event, 'tracker')">Test Tracker</button>
+            <button class="tab-button" onclick="openTab(event, 'issues')">Issues</button>
+        </div>
+        <button class="btn-primary" onclick="openAddDutModal()">+ Register New DUT</button>
+    </div>
+
+    <div id="loading" class="loading-bar">⏳ Communicating with database, please wait...</div>
+
+    <div id="dashboard" class="tab-content active-content">
+        <div class="dashboard-grid">
+            <div class="stat-card">
+                <h3>Total Active DUTs</h3>
+                <div class="number" id="statTotalDut">0</div>
             </div>
-            <div class="form-row" style="margin-top: 15px;">
-                <div class="form-group"><label>GitHub Gist ID</label><input type="text" id="gistId" placeholder="例如: a1b2c3d4e5f6..."></div>
-                <div class="form-group"><label>GitHub Token</label><input type="password" id="gistToken" placeholder="例如: ghp_xxxxxxxx..."></div>
+            <div class="stat-card">
+                <h3>Total Tests Scheduled</h3>
+                <div class="number" id="statTotalTests">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Tests Passed</h3>
+                <div class="number" style="color: #137333;" id="statPassedTests">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Tests Failed / Issues</h3>
+                <div class="number" style="color: #c5221f;" id="statFailedTests">0</div>
             </div>
         </div>
+    </div>
 
-        <div id="setup-csv" class="card hidden">
-            <h3>📥 第一步：导入历史数据 (仅需一次)</h3>
-            <p>系统检测到您的 Gist 数据库为空。请选择您之前导出的 4 个 Excel/CSV 文件，系统会自动转化并同步：</p>
-            <div class="file-upload-row"><span>DUT Registry.csv:</span> <input type="file" id="csvRegistry" accept=".csv"></div>
-            <div class="file-upload-row"><span>Test Tracker.csv:</span> <input type="file" id="csvTracker" accept=".csv"></div>
-            <div class="file-upload-row"><span>Victim Config.csv:</span> <input type="file" id="csvVictims" accept=".csv"></div>
-            <div class="file-upload-row"><span>Issues.csv:</span> <input type="file" id="csvIssues" accept=".csv"></div>
-            <button onclick="importCSV()" style="background: #27ae60;">🚀 立即导入并建立数据库</button>
+    <div id="registry" class="tab-content">
+        <div class="table-container" id="registryTableContainer"></div>
+    </div>
+
+    <div id="tracker" class="tab-content">
+        <div class="table-container" id="trackerTableContainer"></div>
+    </div>
+
+    <div id="issues" class="tab-content">
+        <div class="table-container" id="issuesTableContainer"></div>
+    </div>
+
+    <div id="modalAddDut" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">Register New DUT</div>
+            <div class="form-group">
+                <label>HW Build (e.g., P1, EVT)</label>
+                <input type="text" id="regHwBuild" required>
+            </div>
+            <div class="form-group">
+                <label>Config (e.g., STD, MAX)</label>
+                <input type="text" id="regConfig">
+            </div>
+            <div class="form-group">
+                <label>Loma SN</label>
+                <input type="text" id="regLomaSn">
+            </div>
+            <div class="form-group">
+                <label>Notes</label>
+                <textarea id="regNotes" rows="3"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal('modalAddDut')">Cancel</button>
+                <button class="btn-primary" onclick="submitNewDut()">Save & Generate Tests</button>
+            </div>
         </div>
+    </div>
 
-        <div id="app-content" class="hidden">
-            
-            <div class="card">
-                <h3>➕ 登记新设备 (Register DUT)</h3>
-                <div class="form-row">
-                    <div class="form-group"><label>HW Build</label><input type="text" id="newHwBuild" placeholder="e.g., P1"></div>
-                    <div class="form-group"><label>Loma SN</label><input type="text" id="newLomaSn" placeholder="e.g., LOMA-123"></div>
-                    <div class="form-group"><label>Config</label><input type="text" id="newConfig" placeholder="e.g., STD"></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label>Notes</label><textarea id="newNotes" rows="2" placeholder="附加说明"></textarea></div>
-                </div>
-                <button onclick="submitDUT()">添加设备并自动生成测试计划</button>
+    <div id="modalUpdateTest" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">Update Test Status</div>
+            <input type="hidden" id="updDutNo">
+            <div class="form-group">
+                <label>Victim Test</label>
+                <input type="text" id="updTestName" readonly style="background-color: #f1f3f4;">
             </div>
-
-            <div id="updateSection" class="card" style="background: #fff8e1; border: 1px solid #ffe082;">
-                <h3>📝 快速更新测试状态</h3>
-                <div class="form-row">
-                    <div class="form-group"><label>DUT#</label><input type="text" id="updDutNo" readonly style="background:#eee;"></div>
-                    <div class="form-group"><label>Victim Test</label><input type="text" id="updTestName" readonly style="background:#eee;"></div>
-                    <div class="form-group">
-                        <label>Status</label>
-                        <select id="updStatus">
-                            <option value="Pending">Pending</option>
-                            <option value="In Progress">In Progress</option>
-                            <option value="Pass">Pass</option>
-                            <option value="Fail">Fail</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label>Issues / Comments</label><input type="text" id="updNotes" placeholder="填写 Jira ID 或报错原因"></div>
-                </div>
-                <button onclick="submitUpdate()" style="background:#e67e22;">保存测试更新</button>
+            <div class="form-group">
+                <label>Status</label>
+                <select id="updStatus">
+                    <option value="Pending">Pending</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Pass">Pass</option>
+                    <option value="Fail">Fail</option>
+                </select>
             </div>
-
-            <div class="card">
-                <h3>📋 DUT 注册表 (DUT Registry)</h3>
-                <div class="table-container" id="registryTable"></div>
+            <div class="form-group">
+                <label>Issues / Jira Link / Comments</label>
+                <textarea id="updComments" rows="3"></textarea>
             </div>
-
-            <div class="card">
-                <h3>🎯 测试追踪表 (Test Tracker)</h3>
-                <div class="table-container" id="trackerTable"></div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal('modalUpdateTest')">Cancel</button>
+                <button class="btn-primary" onclick="submitTestUpdate()">Update Status</button>
             </div>
         </div>
     </div>
 
     <script>
-        const FILENAME = 'db.json';
-        let dbCache = { registry: [], tracker: [], victims: [], issues: [] };
+        // ==========================================
+        // 1. SYSTEM CONFIGURATION 
+        // Replace these values with your actual Gist credentials
+        // ==========================================
+        const GIST_CONFIG = {
+            ID: '104ab45888190d6b83f521c00a64ccb4', 
+            TOKEN: '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',
+            FILENAME: 'db.json'
+        };
 
-        // 1. 初始化
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('gistId').value = localStorage.getItem('coex_gist_id') || '';
-            document.getElementById('gistToken').value = localStorage.getItem('coex_token') || '';
-            if(document.getElementById('gistId').value) loadData();
-        });
+        // Local State Cache
+        let db = { registry: [], tracker: [], victims: [], issues: [] };
 
-        // 2. 保存配置并读取数据
-        function saveConfig() {
-            const id = document.getElementById('gistId').value;
-            const tk = document.getElementById('gistToken').value;
-            if(!id || !tk) return alert("请填写完整的 ID 和 Token");
-            localStorage.setItem('coex_gist_id', id);
-            localStorage.setItem('coex_token', tk);
-            loadData();
-        }
+        // ==========================================
+        // 2. INITIALIZATION & DATA FETCHING
+        // ==========================================
+        window.onload = function() {
+            loadAllData();
+        };
 
-        // 3. 通信核心：从 Gist 拉取
-        async function loadData() {
-            const ID = localStorage.getItem('coex_gist_id');
-            const TK = localStorage.getItem('coex_token');
+        async function loadAllData() {
             document.getElementById('loading').style.display = 'block';
             try {
-                const res = await fetch(`https://api.github.com/gists/${ID}`, {
-                    headers: { 'Authorization': `token ${TK}` }
+                const response = await fetch(`https://api.github.com/gists/${GIST_CONFIG.ID}`, {
+                    headers: { 'Authorization': `token ${GIST_CONFIG.TOKEN}` }
                 });
-                if (!res.ok) throw new Error('权限拒绝或 ID 错误');
-                const gist = await res.json();
                 
-                if(!gist.files || !gist.files[FILENAME]) throw new Error(`未找到 ${FILENAME} 文件`);
-                const content = gist.files[FILENAME].content;
-                
-                if(content.trim() === '' || content.trim() === '{}') {
-                    // 空库，显示导入界面
-                    document.getElementById('setup-csv').classList.remove('hidden');
-                    document.getElementById('app-content').classList.add('hidden');
-                } else {
-                    // 解析成功，渲染界面
-                    dbCache = JSON.parse(content);
-                    document.getElementById('setup-csv').classList.add('hidden');
-                    document.getElementById('app-content').classList.remove('hidden');
-                    renderTables();
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
-            } catch (e) {
-                alert("拉取数据失败: " + e.message);
+                
+                const gist = await response.json();
+                const content = gist.files[GIST_CONFIG.FILENAME].content;
+                
+                if (content && content.trim() !== '{}') {
+                    db = JSON.parse(content);
+                }
+
+                // Ensure data arrays exist
+                if (!db.registry) db.registry = [];
+                if (!db.tracker) db.tracker = [];
+                if (!db.victims) db.victims = [];
+                if (!db.issues) db.issues = [];
+
+                renderDashboard();
+                renderRegistry();
+                renderTracker();
+                renderIssues();
+                
+            } catch (error) {
+                console.error("Database connection failed:", error);
+                alert("Failed to connect to the database. Please check your GIST_ID and TOKEN.");
             } finally {
                 document.getElementById('loading').style.display = 'none';
             }
         }
 
-        // 4. 通信核心：写入 Gist
-        async function writeDB(newDb) {
-            const ID = localStorage.getItem('coex_gist_id');
-            const TK = localStorage.getItem('coex_token');
+        async function syncToGist() {
             document.getElementById('loading').style.display = 'block';
             try {
-                const res = await fetch(`https://api.github.com/gists/${ID}`, {
+                const response = await fetch(`https://api.github.com/gists/${GIST_CONFIG.ID}`, {
                     method: 'PATCH',
-                    headers: { 'Authorization': `token ${TK}`, 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Authorization': `token ${GIST_CONFIG.TOKEN}`,
+                        'Content-Type': 'application/json' 
+                    },
                     body: JSON.stringify({
-                        files: { [FILENAME]: { content: JSON.stringify(newDb, null, 2) } }
+                        files: { [GIST_CONFIG.FILENAME]: { content: JSON.stringify(db, null, 2) } }
                     })
                 });
-                if (!res.ok) throw new Error('写入失败');
-                dbCache = newDb;
+
+                if (!response.ok) {
+                    throw new Error("Failed to write to database");
+                }
+            } catch (error) {
+                console.error("Sync failed:", error);
+                alert("Failed to save data. Please try again.");
             } finally {
                 document.getElementById('loading').style.display = 'none';
             }
         }
 
-        // 5. 业务：登记新设备并自动排期测试 (平替原始 .gs)
-        async function submitDUT() {
-            const hwBuild = document.getElementById('newHwBuild').value;
-            const lomaSn = document.getElementById('newLomaSn').value;
-            const config = document.getElementById('newConfig').value;
-            const notes = document.getElementById('newNotes').value;
-            if(!hwBuild) return alert("HW Build 是必填项！");
+        // ==========================================
+        // 3. BUSINESS LOGIC (CRUD OPERATIONS)
+        // ==========================================
+        
+        async function submitNewDut() {
+            const hwBuild = document.getElementById('regHwBuild').value.trim();
+            const config = document.getElementById('regConfig').value.trim();
+            const lomaSn = document.getElementById('regLomaSn').value.trim();
+            const notes = document.getElementById('regNotes').value.trim();
 
-            let nextDutNo = 1;
-            if (dbCache.registry && dbCache.registry.length > 0) {
-                // 确保正确读取最大值
-                nextDutNo = Math.max(...dbCache.registry.map(d => parseInt(d['DUT#']) || 0)) + 1;
+            if (!hwBuild) {
+                alert("HW Build is required.");
+                return;
             }
-            
+
+            // Calculate auto-increment DUT#
+            let nextId = 1;
+            if (db.registry.length > 0) {
+                const ids = db.registry.map(d => parseInt(d['DUT#']) || 0);
+                nextId = Math.max(...ids) + 1;
+            }
+
+            // Generate today's date
+            const today = new Date().toISOString().split('T')[0];
+
+            // 1. Add to Registry
             const newDUT = {
-                'DUT#': nextDutNo, 'Status': 'Active', 'HW Build': hwBuild, 'Coex Box': '', 'Loma SN': lomaSn, 
-                'Config': config, 'Stanley SN': '', 'Stanley Config': '', 'Tether SN': '', 'Tether Config': '', 
-                'OS Build': '', 'FW Version': '', 'Date Registered': new Date().toISOString().split('T')[0], 'Notes': notes
+                'DUT#': nextId,
+                'Status': 'Active',
+                'HW Build': hwBuild,
+                'Config': config,
+                'Loma SN': lomaSn,
+                'Date Registered': today,
+                'Notes': notes
             };
-            
-            dbCache.registry.push(newDUT);
-            
-            // 自动生成测试追踪记录
-            if(dbCache.victims) {
-                dbCache.victims.forEach(v => {
-                    dbCache.tracker.push({
-                        'DUT#': nextDutNo, 'Victim Test': v['Victim Test Name'], 'HW Build': hwBuild, 'Config': config, 
-                        'Stanley Config': '', 'Tether Config': '', 'Date': '', 'Start Time': '', 'End Time': '', 
-                        'Duration': '', 'Coex Box': '', 'OS Build': '', 'FW Version': '', 'Status': 'Pending', 
-                        'Valid Data': '', 'Retest Needed': '', 'Retest Details': '', 'Jira Updated': '', 'SFTP Uploaded': '', 'Issues': ''
+            db.registry.push(newDUT);
+
+            // 2. Automatically generate tests based on Victim Config
+            if (db.victims.length > 0) {
+                db.victims.forEach(v => {
+                    // Handle different variations of column names in the victims CSV
+                    const testName = v['Victim Test Name'] || v['name'] || v['Victim Test'] || 'Unknown Test';
+                    db.tracker.push({
+                        'DUT#': nextId,
+                        'Victim Test': testName,
+                        'HW Build': hwBuild,
+                        'Config': config,
+                        'Status': 'Pending',
+                        'Date': '',
+                        'Issues': ''
                     });
                 });
+            } else {
+                alert("Warning: No victim configurations found. Tests were not automatically generated.");
             }
-            
-            await writeDB(dbCache);
-            alert(`✅ 设备 DUT#${nextDutNo} 登记成功，已自动分配测试计划！`);
-            renderTables();
+
+            closeModal('modalAddDut');
+            await syncToGist();
+            alert(`Success! DUT #${nextId} registered and tests scheduled.`);
+            loadAllData(); // Refresh UI
         }
 
-        // 6. 业务：更新测试状态
-        function openUpdateForm(dutNo, testName) {
-            const test = dbCache.tracker.find(t => t['DUT#'] == dutNo && t['Victim Test'] == testName);
-            if(!test) return;
-            document.getElementById('updDutNo').value = test['DUT#'];
-            document.getElementById('updTestName').value = test['Victim Test'];
-            
-            // 处理状态匹配
-            let status = test['Status'];
-            if(!['Pending', 'In Progress', 'Pass', 'Fail'].includes(status)) status = 'Pending';
-            document.getElementById('updStatus').value = status;
-            
-            document.getElementById('updNotes').value = test['Issues'] || '';
-            document.getElementById('updateSection').scrollIntoView({ behavior: 'smooth' });
-        }
-
-        async function submitUpdate() {
+        async function submitTestUpdate() {
             const dutNo = document.getElementById('updDutNo').value;
             const testName = document.getElementById('updTestName').value;
             const status = document.getElementById('updStatus').value;
-            const notes = document.getElementById('updNotes').value;
-            if(!dutNo) return alert("请先在表格中点击一条测试记录进行修改！");
+            const comments = document.getElementById('updComments').value;
+
+            // Find the exact test record
+            const testIndex = db.tracker.findIndex(t => String(t['DUT#']) === String(dutNo) && t['Victim Test'] === testName);
             
-            const testIndex = dbCache.tracker.findIndex(t => t['DUT#'] == dutNo && t['Victim Test'] == testName);
-            if(testIndex !== -1) {
-                dbCache.tracker[testIndex]['Status'] = status;
-                dbCache.tracker[testIndex]['Issues'] = notes;
-                dbCache.tracker[testIndex]['Date'] = new Date().toISOString().split('T')[0];
+            if (testIndex !== -1) {
+                db.tracker[testIndex]['Status'] = status;
+                db.tracker[testIndex]['Issues'] = comments;
+                db.tracker[testIndex]['Date'] = new Date().toISOString().split('T')[0]; // Update timestamp
                 
-                await writeDB(dbCache);
-                alert('✅ 测试状态已更新！');
-                renderTables();
+                // If status is fail, automatically log it to Issues table
+                if (status === 'Fail') {
+                    db.issues.push({
+                        'Issue ID': 'ISSUE-' + Date.now().toString().slice(-6),
+                        'DUT#': dutNo,
+                        'Victim Test': testName,
+                        'Description': comments || 'Failed test during execution',
+                        'Status': 'Open',
+                        'Date Logged': new Date().toISOString().split('T')[0]
+                    });
+                }
+
+                closeModal('modalUpdateTest');
+                await syncToGist();
+                alert(`Success! Test status updated.`);
+                loadAllData();
+            } else {
+                alert("Error: Test record not found in database.");
             }
         }
 
-        // 7. UI：渲染表格
-        function getStatusClass(status) {
-            const s = (status || '').toLowerCase();
-            if(s === 'pass' || s === 'active') return 'badge-pass';
-            if(s === 'fail') return 'badge-fail';
-            return 'badge-pending';
+        // ==========================================
+        // 4. UI RENDERING & HELPERS
+        // ==========================================
+
+        function getStatusBadge(status) {
+            const s = (status || '').toString().toLowerCase().trim();
+            if (s === 'active' || s === 'open') return `<span class="badge badge-active">${status}</span>`;
+            if (s === 'pending') return `<span class="badge badge-pending">${status}</span>`;
+            if (s === 'in progress') return `<span class="badge badge-inprogress">${status}</span>`;
+            if (s === 'pass' || s === 'passed' || s === 'closed') return `<span class="badge badge-pass">${status}</span>`;
+            if (s === 'fail' || s === 'failed') return `<span class="badge badge-fail">${status}</span>`;
+            return `<span class="badge" style="background:#eee; color:#333;">${status || 'N/A'}</span>`;
         }
 
-        function renderTables() {
-            // Registry 表格
-            let regHtml = `<table><thead><tr><th>DUT#</th><th>Status</th><th>HW Build</th><th>Loma SN</th><th>Config</th><th>Date Registered</th></tr></thead><tbody>`;
-            (dbCache.registry || []).forEach(d => {
-                regHtml += `<tr><td>${d['DUT#']}</td><td><span class="badge ${getStatusClass(d['Status'])}">${d['Status']}</span></td><td>${d['HW Build']}</td><td>${d['Loma SN']}</td><td>${d['Config']}</td><td>${d['Date Registered']}</td></tr>`;
-            });
-            regHtml += '</tbody></table>';
-            document.getElementById('registryTable').innerHTML = regHtml;
-
-            // Tracker 表格 (为了性能倒序展示最新测试)
-            let trkHtml = `<table><thead><tr><th>DUT#</th><th>Victim Test</th><th>Status</th><th>HW Build</th><th>Config</th><th>Issues</th><th>Action</th></tr></thead><tbody>`;
-            const trackerReversed = [...(dbCache.tracker || [])].reverse();
-            trackerReversed.forEach(t => {
-                trkHtml += `<tr>
-                    <td><b>${t['DUT#']}</b></td>
-                    <td>${t['Victim Test']}</td>
-                    <td><span class="badge ${getStatusClass(t['Status'])}">${t['Status'] || 'Pending'}</span></td>
-                    <td>${t['HW Build']}</td>
-                    <td>${t['Config']}</td>
-                    <td style="color:#e74c3c; max-width:200px;">${t['Issues'] || ''}</td>
-                    <td><button class="action-btn" onclick="openUpdateForm('${t['DUT#']}', '${t['Victim Test']}')">Update</button></td>
-                </tr>`;
-            });
-            trkHtml += '</tbody></table>';
-            document.getElementById('trackerTable').innerHTML = trkHtml;
+        function renderDashboard() {
+            document.getElementById('statTotalDut').innerText = db.registry.length;
+            document.getElementById('statTotalTests').innerText = db.tracker.length;
+            
+            const passCount = db.tracker.filter(t => (t['Status'] || '').toLowerCase() === 'pass').length;
+            const failCount = db.tracker.filter(t => (t['Status'] || '').toLowerCase() === 'fail').length;
+            
+            document.getElementById('statPassedTests').innerText = passCount;
+            document.getElementById('statFailedTests').innerText = failCount;
         }
 
-        // ==========================================
-        // 8. CSV 解析与自动建库引擎 (极速版)
-        // ==========================================
-        async function parseCSV(file) {
-            return new Promise((resolve) => {
-                if (!file) { resolve([]); return; }
-                Papa.parse(file, {
-                    header: true, skipEmptyLines: true,
-                    complete: function(results) { resolve(results.data); }
+        function renderRegistry() {
+            let html = `<table>
+                <thead>
+                    <tr>
+                        <th>DUT#</th>
+                        <th>Status</th>
+                        <th>HW Build</th>
+                        <th>Config</th>
+                        <th>Loma SN</th>
+                        <th>Date Registered</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+            
+            // Render from newest to oldest
+            const dataReversed = [...db.registry].reverse();
+            
+            if (dataReversed.length === 0) {
+                html += `<tr><td colspan="7" style="text-align:center;">No DUTs registered yet.</td></tr>`;
+            } else {
+                dataReversed.forEach(d => {
+                    html += `<tr>
+                        <td><b>${d['DUT#'] || ''}</b></td>
+                        <td>${getStatusBadge(d['Status'])}</td>
+                        <td>${d['HW Build'] || ''}</td>
+                        <td>${d['Config'] || ''}</td>
+                        <td>${d['Loma SN'] || ''}</td>
+                        <td>${d['Date Registered'] || ''}</td>
+                        <td>${d['Notes'] || ''}</td>
+                    </tr>`;
                 });
-            });
-        }
-
-        async function importCSV() {
-            const victimsFile = document.getElementById('csvVictims').files[0];
-            const registryFile = document.getElementById('csvRegistry').files[0];
-            const trackerFile = document.getElementById('csvTracker').files[0];
-            const issuesFile = document.getElementById('csvIssues').files[0];
-
-            if(!registryFile || !trackerFile) return alert("请至少上传 Registry 和 Tracker 文件！");
-
-            document.getElementById('loading').innerHTML = '⏳ 正在解析 CSV 并上传至您的 Gist，请耐心等待...';
-            document.getElementById('loading').style.display = 'block';
-
-            const db = {
-                registry: await parseCSV(registryFile),
-                tracker: await parseCSV(trackerFile),
-                victims: await parseCSV(victimsFile),
-                issues: await parseCSV(issuesFile)
-            };
-
-            try {
-                await writeDB(db);
-                alert('🎉 历史数据已成功转换为 JSON 数据库并同步至 Gist！');
-                document.getElementById('setup-csv').classList.add('hidden');
-                document.getElementById('app-content').classList.remove('hidden');
-                renderTables();
-            } catch(e) {
-                alert('上传失败: ' + e.message);
             }
-            document.getElementById('loading').innerHTML = '⏳ 正在与 GitHub Gist 通信，请稍候...';
-            document.getElementById('loading').style.display = 'none';
+            html += `</tbody></table>`;
+            document.getElementById('registryTableContainer').innerHTML = html;
         }
+
+        function renderTracker() {
+            let html = `<table>
+                <thead>
+                    <tr>
+                        <th>DUT#</th>
+                        <th>Victim Test</th>
+                        <th>Status</th>
+                        <th>HW Build</th>
+                        <th>Date Updated</th>
+                        <th>Issues / Comments</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+            // Render from newest to oldest based on index/creation
+            const dataReversed = [...db.tracker].reverse();
+
+            if (dataReversed.length === 0) {
+                html += `<tr><td colspan="7" style="text-align:center;">No tests scheduled yet.</td></tr>`;
+            } else {
+                dataReversed.forEach(t => {
+                    const dutNo = t['DUT#'] || '';
+                    const testName = t['Victim Test'] || '';
+                    const safeTestName = testName.replace(/'/g, "\\'"); // escape single quotes for JS function call
+                    
+                    html += `<tr>
+                        <td><b>${dutNo}</b></td>
+                        <td>${testName}</td>
+                        <td>${getStatusBadge(t['Status'])}</td>
+                        <td>${t['HW Build'] || ''}</td>
+                        <td>${t['Date'] || ''}</td>
+                        <td style="color: #c5221f; font-size: 13px; max-width: 250px;">${t['Issues'] || ''}</td>
+                        <td>
+                            <button class="btn-action" onclick="openUpdateModal('${dutNo}', '${safeTestName}')">Update</button>
+                        </td>
+                    </tr>`;
+                });
+            }
+            html += `</tbody></table>`;
+            document.getElementById('trackerTableContainer').innerHTML = html;
+        }
+
+        function renderIssues() {
+            let html = `<table>
+                <thead>
+                    <tr>
+                        <th>Issue ID</th>
+                        <th>DUT#</th>
+                        <th>Victim Test</th>
+                        <th>Description</th>
+                        <th>Status</th>
+                        <th>Date Logged</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+            const dataReversed = [...db.issues].reverse();
+
+            if (dataReversed.length === 0) {
+                html += `<tr><td colspan="6" style="text-align:center;">No issues logged.</td></tr>`;
+            } else {
+                dataReversed.forEach(i => {
+                    html += `<tr>
+                        <td><b>${i['Issue ID'] || ''}</b></td>
+                        <td>${i['DUT#'] || ''}</td>
+                        <td>${i['Victim Test'] || ''}</td>
+                        <td>${i['Description'] || ''}</td>
+                        <td>${getStatusBadge(i['Status'])}</td>
+                        <td>${i['Date Logged'] || ''}</td>
+                    </tr>`;
+                });
+            }
+            html += `</tbody></table>`;
+            document.getElementById('issuesTableContainer').innerHTML = html;
+        }
+
+        // ==========================================
+        // 5. EVENT LISTENERS & MODAL CONTROLS
+        // ==========================================
+
+        function openTab(evt, tabName) {
+            // Hide all tab contents
+            const tabcontent = document.getElementsByClassName("tab-content");
+            for (let i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+                tabcontent[i].classList.remove("active-content");
+            }
+            
+            // Remove active class from all buttons
+            const tablinks = document.getElementsByClassName("tab-button");
+            for (let i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active-tab", "");
+            }
+            
+            // Show the current tab, and add an "active" class to the button
+            document.getElementById(tabName).style.display = "block";
+            document.getElementById(tabName).classList.add("active-content");
+            evt.currentTarget.className += " active-tab";
+        }
+
+        function openAddDutModal() {
+            // Clear inputs
+            document.getElementById('regHwBuild').value = '';
+            document.getElementById('regConfig').value = '';
+            document.getElementById('regLomaSn').value = '';
+            document.getElementById('regNotes').value = '';
+            
+            document.getElementById('modalAddDut').style.display = 'flex';
+        }
+
+        function openUpdateModal(dutNo, testName) {
+            // Find current data to populate modal
+            const test = db.tracker.find(t => String(t['DUT#']) === String(dutNo) && t['Victim Test'] === testName);
+            
+            document.getElementById('updDutNo').value = dutNo;
+            document.getElementById('updTestName').value = testName;
+            
+            if (test) {
+                let status = test['Status'];
+                if (!['Pending', 'In Progress', 'Pass', 'Fail'].includes(status)) status = 'Pending';
+                document.getElementById('updStatus').value = status;
+                document.getElementById('updComments').value = test['Issues'] || '';
+            } else {
+                document.getElementById('updStatus').value = 'Pending';
+                document.getElementById('updComments').value = '';
+            }
+            
+            document.getElementById('modalUpdateTest').style.display = 'flex';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
     </script>
 </body>
 </html>
